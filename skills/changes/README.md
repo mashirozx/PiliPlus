@@ -15,3 +15,10 @@ or change set.
 	avoidance and safe-area regeneration rules.
 - `platform/linux-package-executable.md`: Linux executable naming and the
 	`piliplus` compatibility command used by package formats.
+
+## Automation Records
+
+- `release-build-dispatch-on-push.md`: dispatch the full tagged Build workflow
+	after every `release` push.
+- `upstream-rebase-automation.md`: guarded hourly GH-AW/Copilot synchronization
+  of this fork with its upstream repository.
