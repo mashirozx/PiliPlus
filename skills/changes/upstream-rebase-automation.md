@@ -27,7 +27,9 @@ GitHub Copilot CLI runtime.
   for synchronized hourly checks. Because this check runs before GH-AW's normal
   safe-output setup, it creates the output directory itself. Manual dispatches
   still run the agent so dry runs and the explicit test inputs keep their
-  intended behavior.
+  intended behavior. The manual `precheck_only` input executes this same
+  deterministic check for debugging: it emits `noop` when synchronized and
+  fails without starting the agent when upstream is newer.
 - The agent clones repositories only for read-only comparison. It requests the
   `rebase-upstream` custom safe output only after identifying a new upstream
   commit not already present in `release`. The safe-output job rebases

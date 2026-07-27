@@ -30,6 +30,11 @@ on:
         required: false
         default: false
         type: boolean
+      precheck_only:
+        description: Run the scheduled upstream pre-check without invoking the agent.
+        required: false
+        default: false
+        type: boolean
 permissions:
   contents: read
   copilot-requests: write
@@ -50,9 +55,10 @@ timeout-minutes: 15
 max-ai-credits: 100
 steps:
   - name: Skip agent when release is current
-    if: ${{ github.event_name == 'schedule' }}
+    if: ${{ github.event_name == 'schedule' || (github.event_name == 'workflow_dispatch' && github.event.inputs.precheck_only == 'true') }}
     env:
       GH_AW_SAFE_OUTPUTS: ${{ steps.set-runtime-paths.outputs.GH_AW_SAFE_OUTPUTS }}
+      PRECHECK_ONLY: ${{ github.event.inputs.precheck_only || 'false' }}
     run: |
       set -euo pipefail
 
@@ -67,6 +73,9 @@ steps:
 
       if git -C "$repository_dir" merge-base --is-ancestor upstream/main origin/release; then
         echo '{"type":"noop","message":"release already contains the current upstream/main commit; skipped the agent."}' >> "$GH_AW_SAFE_OUTPUTS"
+      elif [[ "$PRECHECK_ONLY" == "true" ]]; then
+        echo "::error::upstream/main is newer than release; precheck-only run did not invoke the agent."
+        exit 1
       else
         echo "upstream/main is newer than release; continuing to the agent."
       fi
