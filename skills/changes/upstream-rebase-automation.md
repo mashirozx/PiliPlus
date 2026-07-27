@@ -84,6 +84,11 @@ GitHub Copilot CLI runtime.
   capture the Action URL, release SHA, tag, audit branch, and conflict issue,
   then restore the original release SHA and delete every fixture ref and test
   tag. Never modify `main` for a fixture.
+- GitHub Actions run `30257102693` exercised the manual `precheck_only` entry
+  on `d797434f7`. It detected that `upstream/main` was newer than `release` and
+  exited from the pre-check before the Copilot CLI step; no fixture, release
+  update, tag, or build dispatch was created. This intentionally failed run is
+  the condition that suppresses simulated stale-upstream and conflict tests.
 - `docker run --rm -v "$PWD:/workspace" -w /workspace alpine:3.21 ... gh-aw
   compile --strict .github/workflows/upstream-rebase.md` completed with zero
   errors using GH-AW v0.83.1. The compiler emits only its expected fuzzy
