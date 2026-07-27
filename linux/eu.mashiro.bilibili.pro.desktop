@@ -1,0 +1,7 @@
+[Desktop Entry]
+Type=Application
+Name=哔哩哔哩
+Exec=bilibili_pro
+Icon=eu.mashiro.bilibili.pro
+Categories=AudioVideo;Video;Network;
+StartupNotify=true
