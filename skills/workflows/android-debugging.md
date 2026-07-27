@@ -6,10 +6,33 @@ Use Genymotion for interactive Android device debugging and manual smoke tests.
 This is an approved exception for emulator interactions; it does not replace the
 Docker-first requirement for builds, dependency management, and automated tests.
 
+## Local Environment
+
+- This workstation uses Genymotion as its Android emulator.
+- `adb` may not be available on the shell `PATH`; use the Android SDK or
+   Genymotion-provided `adb` by absolute path when discovering devices, installing
+   APKs, and launching activities.
+- The local Genymotion ADB is
+   `/Applications/Genymotion.app/Contents/MacOS/player.app/Contents/MacOS/tools/adb`.
+- The active Genymotion Phone ARM64 device forwards ADB at `127.0.0.1:6555`.
+
 ## Procedure
 
 1. Start the required Genymotion virtual device.
-2. Build the Android artifact through the cached repository Docker workflow:
+2. Prepare the stable local signing files. `android/app/build.gradle.kts` loads
+   `android/key.properties`, while its `storeFile` is resolved relative to the
+   `android/app/` module. Link both ignored files from `build/android-key/`
+   without printing or committing their contents:
+
+   ```sh
+   ln -sfn ../build/android-key/key.properties android/key.properties
+   ln -sfn ../../build/android-key/key.jks android/app/key.jks
+   ```
+
+   The Gradle configuration applies this signing config to all build types,
+   including debug. This keeps local Docker-built APKs consistently signed and
+   installable as updates on the emulator.
+3. Build the Android artifact through the cached repository Docker workflow:
 
    ```sh
    tool/docker_flutter.sh flutter pub get
@@ -21,9 +44,9 @@ Docker-first requirement for builds, dependency management, and automated tests.
    Android SDK under `build/docker-cache/`. The first invocation populates the
    cache; later builds reuse it. Set `PILIPLUS_DOCKER_CACHE` to use a different
    cache location.
-3. Confirm the device is visible to ADB, then install the artifact and perform
+4. Confirm the device is visible to ADB, then install the artifact and perform
    the requested interactive debugging or smoke test.
-4. Record the device profile, artifact, checks performed, and outcome in the
+5. Record the device profile, artifact, checks performed, and outcome in the
    relevant `skills/changes/` record when the debugging supports a code change.
 
 ## Guardrails
@@ -32,6 +55,10 @@ Docker-first requirement for builds, dependency management, and automated tests.
   the Docker workflow.
 - Use `tool/docker_flutter.sh` for Flutter, Dart, Gradle, and launcher-icon
    generation commands so dependency downloads remain cached under `build/`.
+- Treat `build/android-key/key.properties` and `build/android-key/key.jks` as
+   local secrets. Never read them into chat, print passwords, or add either file
+   or the ignored `android/key.properties` and `android/app/key.jks` links to
+   Git.
 - Use `tool/generate_android_launcher_icons.sh` after changing the active icon
    SVG. It regenerates the master and transparent foreground images, runs
    `flutter_launcher_icons`, then restores direct adaptive drawable references
