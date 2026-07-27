@@ -1,5 +1,6 @@
 import 'dart:math';
 
+import 'package:PiliPlus/common/assets.dart';
 import 'package:PiliPlus/common/style.dart';
 import 'package:PiliPlus/common/widgets/badge.dart';
 import 'package:PiliPlus/common/widgets/button/icon_button.dart';
@@ -19,6 +20,7 @@ import 'package:PiliPlus/utils/extension/get_ext.dart';
 import 'package:PiliPlus/utils/num_utils.dart';
 import 'package:PiliPlus/utils/page_utils.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:get/get.dart';
 
@@ -405,8 +407,20 @@ class _PgcIntroPageState extends State<PgcIntroPage> {
           Obx(
             () => ActionItem(
               animation: introController.tripleAnimation,
-              icon: const Icon(FontAwesomeIcons.b),
-              selectIcon: const Icon(FontAwesomeIcons.b),
+              iconBuilder: (color) => SvgPicture.asset(
+                Assets.coinActionUnselected,
+                width: 20,
+                height: 20,
+                colorFilter: ColorFilter.mode(color, BlendMode.srcIn),
+                semanticsLabel: '投币',
+              ),
+              selectIconBuilder: (color) => SvgPicture.asset(
+                Assets.coinAction,
+                width: 18,
+                height: 18,
+                colorFilter: ColorFilter.mode(color, BlendMode.srcIn),
+                semanticsLabel: '投币',
+              ),
               onTap: introController.actionCoinVideo,
               selectStatus: introController.hasCoin,
               semanticsLabel: '投币',

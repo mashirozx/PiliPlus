@@ -6,8 +6,11 @@ import 'package:flutter/material.dart';
 class ActionItem extends StatelessWidget {
   const ActionItem({
     super.key,
-    required this.icon,
+    this.icon,
+    this.iconBuilder,
+    this.iconColor,
     this.selectIcon,
+    this.selectIconBuilder,
     this.onTap,
     this.onLongPress,
     this.text,
@@ -17,11 +20,20 @@ class ActionItem extends StatelessWidget {
     this.animation,
     this.onStartTriple,
     this.onCancelTriple,
-  }) : assert(!selectStatus || selectIcon != null),
+  }) : assert(icon != null || iconBuilder != null),
+       assert(
+         !selectStatus ||
+             selectIcon != null ||
+             selectIconBuilder != null ||
+             iconBuilder != null,
+       ),
        _isThumbsUp = onStartTriple != null;
 
-  final Icon icon;
+  final Icon? icon;
+  final Widget Function(Color color)? iconBuilder;
+  final Color? iconColor;
   final Icon? selectIcon;
+  final Widget Function(Color color)? selectIconBuilder;
   final VoidCallback? onTap;
   final VoidCallback? onLongPress;
   final String? text;
@@ -40,12 +52,17 @@ class ActionItem extends StatelessWidget {
     late final primary = !expand && colorScheme.isLight
         ? colorScheme.inversePrimary
         : colorScheme.primary;
-    Widget child = Icon(
-      selectStatus ? selectIcon!.icon! : icon.icon,
-      size: 18,
-      color: selectStatus ? primary : icon.color ?? colorScheme.outline,
-      semanticLabel: semanticsLabel,
-    );
+    final color = selectStatus
+        ? primary
+        : iconColor ?? icon?.color ?? colorScheme.outline;
+    Widget child =
+        (selectStatus ? selectIconBuilder : iconBuilder)?.call(color) ??
+        Icon(
+          selectStatus ? selectIcon!.icon! : icon!.icon,
+          size: 18,
+          color: color,
+          semanticLabel: semanticsLabel,
+        );
 
     if (animation != null) {
       child = Stack(

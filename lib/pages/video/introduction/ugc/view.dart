@@ -43,6 +43,7 @@ import 'package:PiliPlus/utils/request_utils.dart';
 import 'package:PiliPlus/utils/utils.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_smart_dialog/flutter_smart_dialog.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:get/get.dart';
 import 'package:material_design_icons_flutter/material_design_icons_flutter.dart';
@@ -498,8 +499,20 @@ class _UgcIntroPanelState extends State<UgcIntroPanel> {
           Obx(
             () => ActionItem(
               animation: introController.tripleAnimation,
-              icon: const Icon(FontAwesomeIcons.b),
-              selectIcon: const Icon(FontAwesomeIcons.b),
+              iconBuilder: (color) => SvgPicture.asset(
+                Assets.coinActionUnselected,
+                width: 20,
+                height: 20,
+                colorFilter: ColorFilter.mode(color, BlendMode.srcIn),
+                semanticsLabel: '投币',
+              ),
+              selectIconBuilder: (color) => SvgPicture.asset(
+                Assets.coinAction,
+                width: 18,
+                height: 18,
+                colorFilter: ColorFilter.mode(color, BlendMode.srcIn),
+                semanticsLabel: '投币',
+              ),
               onTap: introController.actionCoinVideo,
               selectStatus: introController.hasCoin,
               semanticsLabel: '投币',
