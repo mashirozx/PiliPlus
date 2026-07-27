@@ -21,6 +21,10 @@ GitHub Copilot CLI runtime.
 - The GH-AW Markdown workflow uses the Copilot engine to compare `origin/main`,
   `origin/release`, and `bggRGjQaUbCoE/PiliPlus` `main`. It never pushes to
   `main`.
+- `bggRGjQaUbCoE/PiliPlus` is permanently read-only upstream: it is used only
+  for source reads and fetches. The local account has no write permission there;
+  tags, releases, workflow dispatches, pushes, and every other write-capable
+  GitHub operation must target fork `origin` (`mashirozx/PiliPlus`).
 - Upstream freshness is determined solely by whether `upstream/main` is an
   ancestor of `origin/release`. The current `main` commit is never used as the
   freshness baseline; it is only the source that the safe-output job rebases
@@ -45,9 +49,10 @@ GitHub Copilot CLI runtime.
   dispatch the build. It verifies the requested SHA after a fresh fetch,
   rebases linearly, and publishes with `--force-with-lease`.
 - After a successful release update, it derives the app version from
-  `pubspec.yaml`, creates a UTC tag in the Git-valid `${version}-YYYY.MM.DD-HH-MM` format,
-  and dispatches `build.yml` at that tag with every platform build enabled. It
-  skips both tag and build when `release` is unchanged.
+  `pubspec.yaml`, creates a Git-valid Beijing-time tag in the shared
+  `${version}-YYYY.MM.DD-HH.mm` format, and dispatches `build.yml` at that tag
+  with every platform build enabled. It skips both tag and build when `release`
+  is unchanged. Manually dispatched builds use the same tag format.
 - If Git reports merge conflicts, the safe-output job captures the conflicted
   files and combined diff hunks, resolves each file by retaining the upstream
   side (`git checkout --ours` during rebase), and continues the rebase. Before
@@ -146,6 +151,14 @@ GitHub Copilot CLI runtime.
   `2.1.0-2026.07.27-09-11`, dispatched Build run `30252873255`, and opened
   Issue #3 with the upstream/source/resolution links, conflict-file link, and
   combined diff hunk. The disposable source branches were deleted afterward.
+- An initial manual Build dispatch to the upstream repository
+  `bggRGjQaUbCoE/PiliPlus` with Beijing-time tag
+  `2.1.0-2026.07.27-20.08` was rejected with HTTP `403`; the local GitHub CLI
+  account `moezhx` had only effective `READ` access there. The fork `origin` is
+  `mashirozx/PiliPlus`, where the same account has `WRITE` access. A manual
+  dispatch from `origin/main` created Build run `30265475015` with tag
+  `2.1.0-2026.07.27-20.19`. Dispatching through GitHub CLI must target `origin`,
+  and web and CLI authentication contexts must be checked independently.
 - A prior non-conflicting test accidentally published tag
   `2.1.0-2026.07.27-09-05`; its in-progress build was canceled and that tag was
   deleted before the final conflict validation.

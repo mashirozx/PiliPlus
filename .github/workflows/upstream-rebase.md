@@ -341,7 +341,7 @@ safe-outputs:
               exit 1
             fi
 
-            release_tag="${app_version}-$(date -u '+%Y.%m.%d-%H-%M')"
+            release_tag="${app_version}-$(TZ=Asia/Shanghai date '+%Y.%m.%d-%H.%M')"
             git tag -a "$release_tag" -m "Release $release_tag" "$release_after_sha"
             git push origin "refs/tags/${release_tag}"
 
