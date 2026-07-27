@@ -21,6 +21,10 @@ GitHub Copilot CLI runtime.
 - The GH-AW Markdown workflow uses the Copilot engine to compare `origin/main`,
   `origin/release`, and `bggRGjQaUbCoE/PiliPlus` `main`. It never pushes to
   `main`.
+- Upstream freshness is determined solely by whether `upstream/main` is an
+  ancestor of `origin/release`. The current `main` commit is never used as the
+  freshness baseline; it is only the source that the safe-output job rebases
+  after an update is detected.
 - Scheduled runs first perform the `release` versus `upstream/main` ancestry
   check with Git alone. When release already contains upstream, the step writes
   a GH-AW `noop` safe output and the agent never starts, avoiding AI-credit use
@@ -28,8 +32,8 @@ GitHub Copilot CLI runtime.
   safe-output setup, it creates the output directory itself. Manual dispatches
   still run the agent so dry runs and the explicit test inputs keep their
   intended behavior. The manual `precheck_only` input executes this same
-  deterministic check for debugging: it emits `noop` when synchronized and
-  fails without starting the agent when upstream is newer.
+  deterministic check before the normal manual workflow: it emits `noop` when
+  synchronized and continues to the agent when upstream is newer.
 - The agent clones repositories only for read-only comparison. It requests the
   `rebase-upstream` custom safe output only after identifying a new upstream
   commit not already present in `release`. The safe-output job rebases
@@ -86,9 +90,10 @@ GitHub Copilot CLI runtime.
   tag. Never modify `main` for a fixture.
 - GitHub Actions run `30257102693` exercised the manual `precheck_only` entry
   on `d797434f7`. It detected that `upstream/main` was newer than `release` and
-  exited from the pre-check before the Copilot CLI step; no fixture, release
-  update, tag, or build dispatch was created. This intentionally failed run is
-  the condition that suppresses simulated stale-upstream and conflict tests.
+  exposed an incorrect pre-check-only failure path before the Copilot CLI step;
+  no fixture, release update, tag, or build dispatch was created. The current
+  workflow removes that failure path, so upstream advances continue to the
+  normal agent-driven rebase flow and still suppress simulated tests.
 - `docker run --rm -v "$PWD:/workspace" -w /workspace alpine:3.21 ... gh-aw
   compile --strict .github/workflows/upstream-rebase.md` completed with zero
   errors using GH-AW v0.83.1. The compiler emits only its expected fuzzy
