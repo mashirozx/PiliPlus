@@ -171,3 +171,68 @@ jobs:
         permissions: write-all
         with:
             tag: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.tag || '' }}
+
+    release_changelog:
+        if: "${{ github.event_name == 'workflow_dispatch' && github.event.inputs.tag != '' }}"
+        name: Update release changelog
+        runs-on: ubuntu-latest
+        permissions:
+            contents: write
+
+        steps:
+            - name: Check out release history
+              uses: actions/checkout@v7
+              with:
+                  fetch-depth: 0
+
+            - name: Generate changelog from patch differences
+              id: changelog
+              env:
+                  GH_TOKEN: ${{ github.token }}
+                  TAG: ${{ github.event.inputs.tag }}
+              run: |
+                  set -euo pipefail
+
+                  for _ in $(seq 1 120); do
+                    if gh release view "$TAG" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+                      break
+                    fi
+                    sleep 30
+                  done
+                  gh release view "$TAG" --repo "$GITHUB_REPOSITORY" >/dev/null
+
+                  git fetch --force --tags origin
+                  current_commit=$(git rev-parse "${TAG}^{commit}")
+                  current_tree=$(git rev-parse "${current_commit}^{tree}")
+                  previous_tag=$(gh api "repos/${GITHUB_REPOSITORY}/releases?per_page=100" | jq -r --arg tag "$TAG" \
+                    "[.[] | select(.draft == false and .tag_name != \$tag)] | sort_by(.created_at) | last | .tag_name // empty")
+
+                  notes="$RUNNER_TEMP/release-notes.md"
+                  if [[ -z "$previous_tag" ]]; then
+                    printf '%s\n' 'No previous release is available.' > "$notes"
+                  else
+                    previous_commit=$(git rev-parse "${previous_tag}^{commit}")
+                    previous_tree=$(git rev-parse "${previous_commit}^{tree}")
+                    test -n "$current_tree"
+                    test -n "$previous_tree"
+
+                    git cherry "$previous_commit" "$current_commit" | while read -r status commit; do
+                      [[ "$status" == '+' ]] || continue
+                      subject=$(git log -1 --format=%s "$commit")
+                      printf -- "- [\`%.7s\`](%s/%s/commit/%s) %s\n" \
+                        "$commit" "$GITHUB_SERVER_URL" "$GITHUB_REPOSITORY" "$commit" "$subject"
+                    done > "$notes"
+
+                    if [[ ! -s "$notes" ]]; then
+                      printf '%s\n' 'No patch differences from the previous release.' > "$notes"
+                    fi
+                  fi
+
+                  echo "notes=$notes" >> "$GITHUB_OUTPUT"
+
+            - name: Update release notes
+              env:
+                  GH_TOKEN: ${{ github.token }}
+                  TAG: ${{ github.event.inputs.tag }}
+                  NOTES: ${{ steps.changelog.outputs.notes }}
+              run: gh release edit "$TAG" --repo "$GITHUB_REPOSITORY" --notes-file "$NOTES"
