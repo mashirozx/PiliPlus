@@ -1,0 +1,34 @@
+name: Sync Main to Release
+
+on:
+    push:
+        branches:
+            - main
+
+permissions:
+    contents: read
+
+concurrency:
+    group: sync-upstream-${{ github.repository }}
+    cancel-in-progress: false
+
+jobs:
+    sync:
+        name: Sync release branch
+        runs-on: ubuntu-latest
+
+        steps:
+            - name: Check out pushed main commit
+              uses: actions/checkout@v7
+              with:
+                  ref: ${{ github.sha }}
+                  fetch-depth: 0
+                  persist-credentials: false
+
+            - name: Force release to the pushed main commit
+              env:
+                  FORK_PUSH_TOKEN: ${{ secrets.FORK_PUSH_TOKEN }}
+              run: |
+                  set -euo pipefail
+                  git remote set-url origin "https://x-access-token:${FORK_PUSH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git"
+                  git push origin "${GITHUB_SHA}:refs/heads/release" --force

@@ -18,6 +18,8 @@ or change set.
 
 ## Automation Records
 
+- `main-to-release-sync.md`: force-sync `release` to every pushed `main`
+	commit using the fork push token.
 - `upstream-rebase-automation.md`: guarded hourly GH-AW/Copilot synchronization
   of this fork with its upstream repository.
 
