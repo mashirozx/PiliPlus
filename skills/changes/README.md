@@ -24,3 +24,8 @@ or change set.
 	differences with the previous release.
 - `upstream-rebase-automation.md`: guarded hourly GH-AW/Copilot synchronization
   of this fork with its upstream repository.
+
+## Video Records
+
+- `video/video-detail-loading-skeleton.md`: loading placeholders that stabilize
+	UGC video detail metadata and controls.
