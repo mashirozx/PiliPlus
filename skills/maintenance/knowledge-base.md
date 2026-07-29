@@ -47,3 +47,20 @@ Known limitations, migration work, or `None`.
   or should be proposed upstream.
 - Mark stale records `Superseded` or `Removed`; retain a link to the successor
   when one exists.
+
+## Retention Rules
+
+- Change records are maintainable behavior summaries, not execution logs. Keep
+  the implementation constraints and the smallest set of validation commands
+  and outcomes that establish confidence.
+- Do not record routine retries, dependency-download output, device IDs,
+  network endpoints, signing mismatches, installation steps, or other transient
+  diagnostics unless they explain an active limitation that future maintainers
+  must reproduce.
+- Do not move transient logs to another knowledge-base record. Git history is
+  the archive for one-off execution details; move information only when it is a
+  reusable procedure for `workflows/` or a durable design decision for
+  `architecture/`.
+- Before adding a detail, verify that it is needed to change, validate,
+  reproduce, or resolve future conflicts in the affected behavior. Omit it if
+  it does not meet one of these purposes, and remove it when it becomes stale.
