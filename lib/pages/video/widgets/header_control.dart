@@ -9,6 +9,7 @@ import 'package:PiliPlus/common/widgets/custom_icon.dart';
 import 'package:PiliPlus/common/widgets/dialog/report.dart';
 import 'package:PiliPlus/common/widgets/dialog/simple_dialog_option.dart';
 import 'package:PiliPlus/common/widgets/marquee.dart';
+import 'package:PiliPlus/common/widgets/svg/coin_icon.dart';
 import 'package:PiliPlus/http/danmaku.dart';
 import 'package:PiliPlus/http/danmaku_block.dart';
 import 'package:PiliPlus/http/init.dart';
@@ -1953,6 +1954,41 @@ class HeaderControlState extends State<HeaderControl>
                   ),
                 ),
               ),
+            if (introController case final UgcIntroController ugc)
+              SizedBox(
+                width: btnWidth,
+                height: btnHeight,
+                child: Obx(
+                  () => ActionItem(
+                    expand: false,
+                    icon: const Icon(
+                      FontAwesomeIcons.thumbsDown,
+                      color: Colors.white,
+                    ),
+                    selectIcon: const Icon(FontAwesomeIcons.solidThumbsDown),
+                    onTap: () => ugc.handleAction(ugc.actionDislikeVideo),
+                    selectStatus: ugc.hasDislike.value,
+                    semanticsLabel: '点踩',
+                  ),
+                ),
+              ),
+            SizedBox(
+              width: btnWidth,
+              height: btnHeight,
+              child: Obx(
+                () => ActionItem(
+                  expand: false,
+                  animation: introController.tripleAnimation,
+                  iconBuilder: (_) =>
+                      const CoinIcon(selected: false, color: Colors.white),
+                  selectIconBuilder: (color) =>
+                      CoinIcon(selected: true, color: color),
+                  onTap: introController.actionCoinVideo,
+                  selectStatus: introController.hasCoin,
+                  semanticsLabel: '投币',
+                ),
+              ),
+            ),
             SizedBox(
               width: btnWidth,
               height: btnHeight,
