@@ -7,7 +7,8 @@
 
 #include "flutter/generated_plugin_registrant.h"
 
-struct _MyApplication {
+struct _MyApplication
+{
   GtkApplication parent_instance;
   char **dart_entrypoint_arguments;
 };
@@ -15,16 +16,19 @@ struct _MyApplication {
 G_DEFINE_TYPE(MyApplication, my_application, GTK_TYPE_APPLICATION)
 
 // Called when first Flutter frame received.
-static void first_frame_cb(MyApplication *self, FlView *view) {
+static void first_frame_cb(MyApplication *self, FlView *view)
+{
   gtk_widget_show(gtk_widget_get_toplevel(GTK_WIDGET(view)));
 }
 
 // Called when window is requested to be closed.
 static gboolean window_delete_event_cb(GtkWidget *widget, GdkEvent *event,
-                                       gpointer data) {
+                                       gpointer data)
+{
   // Get the application and quit it.
   GtkApplication *app = gtk_window_get_application(GTK_WINDOW(widget));
-  if (app != nullptr) {
+  if (app != nullptr)
+  {
     g_application_quit(G_APPLICATION(app));
   }
   // Return TRUE to prevent further processing of the delete event.
@@ -32,10 +36,12 @@ static gboolean window_delete_event_cb(GtkWidget *widget, GdkEvent *event,
 }
 
 // Implements GApplication::activate.
-static void my_application_activate(GApplication *application) {
+static void my_application_activate(GApplication *application)
+{
   MyApplication *self = MY_APPLICATION(application);
   GtkWindow *window =
       GTK_WINDOW(gtk_application_window_new(GTK_APPLICATION(application)));
+  gtk_window_set_icon_name(window, "eu.mashiro.bilibili.pro");
 
   // Use a header bar when running in GNOME as this is the common style used
   // by applications and is the setup most users will be using (e.g. Ubuntu
@@ -45,17 +51,20 @@ static void my_application_activate(GApplication *application) {
   // If running on Wayland assume the header bar will work (may need changing
   // if future cases occur).
 
-  const gboolean use_header_bar = [window]() -> gboolean {
+  const gboolean use_header_bar = [window]() -> gboolean
+  {
     if (g_file_test(g_build_filename(g_get_user_data_dir(),
-                                     "com.example.piliplus", "use_ssd", NULL),
+                                     "eu.mashiro.bilibili.pro", "use_ssd", NULL),
                     G_FILE_TEST_EXISTS))
       return FALSE;
 
 #ifdef GDK_WINDOWING_X11
     GdkScreen *screen = gtk_window_get_screen(window);
-    if (GDK_IS_X11_SCREEN(screen)) {
+    if (GDK_IS_X11_SCREEN(screen))
+    {
       const gchar *wm_name = gdk_x11_screen_get_window_manager_name(screen);
-      if (g_strcmp0(wm_name, "GNOME Shell") != 0) {
+      if (g_strcmp0(wm_name, "GNOME Shell") != 0)
+      {
         return FALSE;
       }
     }
@@ -63,14 +72,17 @@ static void my_application_activate(GApplication *application) {
     return TRUE;
   }();
 
-  if (use_header_bar) {
+  if (use_header_bar)
+  {
     GtkHeaderBar *header_bar = GTK_HEADER_BAR(gtk_header_bar_new());
     gtk_widget_show(GTK_WIDGET(header_bar));
-    gtk_header_bar_set_title(header_bar, "piliplus");
+    gtk_header_bar_set_title(header_bar, "哔哩哔哩");
     gtk_header_bar_set_show_close_button(header_bar, TRUE);
     gtk_window_set_titlebar(window, GTK_WIDGET(header_bar));
-  } else {
-    gtk_window_set_title(window, "piliplus");
+  }
+  else
+  {
+    gtk_window_set_title(window, "哔哩哔哩");
   }
 
   gtk_window_set_default_size(window, 1280, 720);
@@ -108,13 +120,15 @@ static void my_application_activate(GApplication *application) {
 // Implements GApplication::local_command_line.
 static gboolean my_application_local_command_line(GApplication *application,
                                                   gchar ***arguments,
-                                                  int *exit_status) {
+                                                  int *exit_status)
+{
   MyApplication *self = MY_APPLICATION(application);
   // Strip out the first argument as it is the binary name.
   self->dart_entrypoint_arguments = g_strdupv(*arguments + 1);
 
   g_autoptr(GError) error = nullptr;
-  if (!g_application_register(application, nullptr, &error)) {
+  if (!g_application_register(application, nullptr, &error))
+  {
     g_warning("Failed to register: %s", error->message);
     *exit_status = 1;
     return TRUE;
@@ -127,7 +141,8 @@ static gboolean my_application_local_command_line(GApplication *application,
 }
 
 // Implements GApplication::startup.
-static void my_application_startup(GApplication *application) {
+static void my_application_startup(GApplication *application)
+{
   // MyApplication* self = MY_APPLICATION(object);
 
   // Perform any actions required at application startup.
@@ -136,7 +151,8 @@ static void my_application_startup(GApplication *application) {
 }
 
 // Implements GApplication::shutdown.
-static void my_application_shutdown(GApplication *application) {
+static void my_application_shutdown(GApplication *application)
+{
   // MyApplication* self = MY_APPLICATION(object);
 
   // Perform any actions required at application shutdown.
@@ -145,13 +161,15 @@ static void my_application_shutdown(GApplication *application) {
 }
 
 // Implements GObject::dispose.
-static void my_application_dispose(GObject *object) {
+static void my_application_dispose(GObject *object)
+{
   MyApplication *self = MY_APPLICATION(object);
   g_clear_pointer(&self->dart_entrypoint_arguments, g_strfreev);
   G_OBJECT_CLASS(my_application_parent_class)->dispose(object);
 }
 
-static void my_application_class_init(MyApplicationClass *klass) {
+static void my_application_class_init(MyApplicationClass *klass)
+{
   G_APPLICATION_CLASS(klass)->activate = my_application_activate;
   G_APPLICATION_CLASS(klass)->local_command_line =
       my_application_local_command_line;
@@ -162,7 +180,8 @@ static void my_application_class_init(MyApplicationClass *klass) {
 
 static void my_application_init(MyApplication *self) {}
 
-MyApplication *my_application_new() {
+MyApplication *my_application_new()
+{
   // Set the program name to the application ID, which helps various systems
   // like GTK and desktop environments map this running application to its
   // corresponding .desktop file. This ensures better integration by allowing
