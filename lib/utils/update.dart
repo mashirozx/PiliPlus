@@ -12,8 +12,10 @@ import 'package:PiliPlus/utils/storage_key.dart';
 import 'package:device_info_plus/device_info_plus.dart';
 import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart' show kDebugMode;
+import 'package:flutter/material.dart';
+import 'package:flutter_html/flutter_html.dart';
 import 'package:flutter_smart_dialog/flutter_smart_dialog.dart';
-import 'package:material_ui/material_ui.dart';
+import 'package:markdown/markdown.dart' as markdown;
 
 abstract final class Update {
   // 检查更新
@@ -63,7 +65,23 @@ abstract final class Update {
                         style: const TextStyle(fontSize: 20),
                       ),
                       const SizedBox(height: 8),
-                      Text('${data['body']}'),
+                      Html(
+                        data: markdown.markdownToHtml('${data['body']}'),
+                        onLinkTap: (url, _, _) {
+                          if (url != null) PageUtils.launchURL(url);
+                        },
+                        style: {
+                          'body': Style(
+                            margin: Margins.zero,
+                            padding: HtmlPaddings.zero,
+                          ),
+                          'p': Style(margin: Margins.only(bottom: 4)),
+                          'li > p': Style(display: Display.inline),
+                          'li': Style(
+                            padding: HtmlPaddings.only(bottom: 4),
+                          ),
+                        },
+                      ),
                       TextButton(
                         onPressed: () => PageUtils.launchURL(
                           '${Constants.sourceCodeUrl}/commits/main',
