@@ -25,6 +25,11 @@ or change set.
 - `upstream-rebase-automation.md`: guarded hourly GH-AW/Copilot synchronization
   of this fork with its upstream repository.
 
+## Update Records
+
+- `update-release-markdown.md`: render Markdown release notes in the in-app
+	update dialog and open their links externally.
+
 ## Video Records
 
 - `video/video-detail-loading-skeleton.md`: loading placeholders that stabilize
