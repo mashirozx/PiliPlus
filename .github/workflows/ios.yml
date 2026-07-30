@@ -42,6 +42,9 @@ jobs:
           find Payload/Runner.app/Frameworks -type d -name "*.framework" -exec codesign --force --sign - --preserve-metadata=identifier,entitlements {} \;
           zip -r9 PiliPlus_ios_${{env.version}}.ipa Payload/Runner.app
 
+      - name: Rename release artifact
+        run: mv PiliPlus_ios_*.ipa BilibiliPro_ios_${{env.version}}.ipa
+
       - name: Release
         if: ${{ github.event.inputs.tag != '' }}
         uses: softprops/action-gh-release@v3
@@ -49,11 +52,11 @@ jobs:
           tag_name: ${{ github.event.inputs.tag }}
           name: ${{ github.event.inputs.tag }}
           files: |
-            PiliPlus_ios_*.ipa
+            BilibiliPro_ios_*.ipa
 
       - name: Upload ios release
         uses: actions/upload-artifact@v7
         with:
           archive: false
           name: iOS-release
-          path: PiliPlus_ios_*.ipa
+          path: BilibiliPro_ios_*.ipa
