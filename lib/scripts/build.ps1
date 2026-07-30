@@ -5,7 +5,8 @@ param(
 try {
     $versionName = $null
 
-    $versionCode = [int](git rev-list --count HEAD).Trim()
+    $buildTime = [int]([DateTimeOffset]::UtcNow.ToUnixTimeSeconds())
+    $versionCode = $buildTime
 
     $commitHash = (git rev-parse HEAD).Trim()
 
@@ -27,8 +28,6 @@ try {
     }
 
     $updatedContent | Set-Content -Path 'pubspec.yaml' -Encoding UTF8
-
-    $buildTime = [int]([DateTimeOffset]::Now.ToUnixTimeSeconds())
 
     $data = @{
         'pili.name' = $versionName
