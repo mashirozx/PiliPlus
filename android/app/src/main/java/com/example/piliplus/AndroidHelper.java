@@ -1,4 +1,4 @@
-package com.example.piliplus;
+package eu.mashiro.bilibili.pro;
 
 import android.annotation.SuppressLint;
 import android.app.Activity;
