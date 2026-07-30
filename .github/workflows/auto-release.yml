@@ -1,0 +1,57 @@
+name: Auto Release
+
+on:
+  push:
+    branches:
+      - release
+
+permissions:
+  actions: write
+  contents: read
+
+concurrency:
+  group: auto-release-${{ github.repository }}
+  cancel-in-progress: false
+
+jobs:
+  dispatch:
+    name: Auto release
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out pushed release commit
+        uses: actions/checkout@v7
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+
+      - name: Generate an unused release tag
+        id: release_tag
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+
+          version=$(sed -nE 's/^version: ([0-9]+\.[0-9]+\.[0-9]+)\+.*/\1/p' pubspec.yaml)
+          [[ "$version" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]
+
+          while true; do
+            tag="$version-$(TZ=Asia/Shanghai date '+%Y.%m.%d-%H.%M')"
+            if [[ $(gh api "repos/${GITHUB_REPOSITORY}/git/matching-refs/tags/$tag" --jq 'length') == 0 ]]; then
+              echo "tag=$tag" >> "$GITHUB_OUTPUT"
+              break
+            fi
+
+            echo "Release tag $tag already exists; waiting for the next Beijing-time minute."
+            sleep 15
+          done
+
+      - name: Trigger Build
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ steps.release_tag.outputs.tag }}
+        run: |
+          set -euo pipefail
+          gh workflow run Build --repo "$GITHUB_REPOSITORY" --ref release \
+            -f build_android=true -f build_ios=true -f build_mac=true \
+            -f build_win_x64=true -f build_linux_x64=true -f tag="$TAG"
