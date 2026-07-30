@@ -13,6 +13,7 @@
 ![GitHub all releases](https://img.shields.io/github/downloads/mashirozx/PiliPlus/total)
 [![Latest Release](https://img.shields.io/github/v/release/mashirozx/PiliPlus?display_name=tag&label=latest)](https://github.com/mashirozx/PiliPlus/releases)
 [![Build](https://img.shields.io/github/actions/workflow/status/mashirozx/PiliPlus/build.yml?label=build)](https://github.com/mashirozx/PiliPlus/actions/workflows/build.yml)
+[![Sync Upstream](https://img.shields.io/github/actions/workflow/status/mashirozx/PiliPlus/sync-upstream.lock.yml?label=sync%20upstream)](https://github.com/mashirozx/PiliPlus/actions/workflows/sync-upstream.lock.yml)
 </div>
     <p>使用Flutter开发的BiliBili第三方客户端</p>
     
