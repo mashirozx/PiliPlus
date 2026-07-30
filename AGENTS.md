@@ -12,6 +12,8 @@ Read the applicable documents in `skills/` before making a change:
 - `skills/workflows/android-debugging.md` for Android device debugging.
 - `skills/workflows/worktree-management.md` before creating or removing a
   worktree.
+- `skills/workflows/main-build.md` for requests to manually dispatch a build
+  for this fork.
 - `skills/maintenance/knowledge-base.md` for knowledge-base rules.
 - Relevant records under `skills/changes/` and `skills/architecture/`.
 
