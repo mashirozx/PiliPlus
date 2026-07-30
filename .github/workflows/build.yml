@@ -48,7 +48,28 @@ on:
                 type: string
 
 jobs:
+    validate_release_tag:
+        name: Validate release tag
+        runs-on: ubuntu-latest
+        permissions:
+            contents: read
+
+        steps:
+            - name: Verify release tag matches this build
+              if: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.tag != '' }}
+              env:
+                  TAG: ${{ github.event.inputs.tag }}
+              run: |
+                  set -euo pipefail
+
+                  tag_commit=$(git ls-remote --exit-code --refs "$GITHUB_SERVER_URL/$GITHUB_REPOSITORY.git" "refs/tags/$TAG" | awk '{print $1}')
+                  if [[ "$tag_commit" != "$GITHUB_SHA" ]]; then
+                    echo "::error::Release tag $TAG targets $tag_commit, but this build targets $GITHUB_SHA."
+                    exit 1
+                  fi
+
     android:
+        needs: validate_release_tag
         if: ${{ (github.event_name == 'pull_request' && github.repository == 'bggRGjQaUbCoE/PiliPlus') || github.event.inputs.build_android == 'true' }}
         name: Release Android
         runs-on: ubuntu-latest
@@ -145,6 +166,7 @@ jobs:
                   path: BilibiliPro_android_*_x86_64.apk
 
     ios:
+        needs: validate_release_tag
         if: ${{ (github.event_name == 'pull_request' && github.repository == 'bggRGjQaUbCoE/PiliPlus') || github.event.inputs.build_ios == 'true' }}
         uses: ./.github/workflows/ios.yml
         permissions: write-all
@@ -152,6 +174,7 @@ jobs:
             tag: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.tag || '' }}
 
     mac:
+        needs: validate_release_tag
         if: ${{ github.event.inputs.build_mac == 'true' }}
         uses: ./.github/workflows/mac.yml
         permissions: write-all
@@ -159,6 +182,7 @@ jobs:
             tag: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.tag || '' }}
 
     win_x64:
+        needs: validate_release_tag
         if: ${{ (github.event_name == 'pull_request' && github.repository == 'bggRGjQaUbCoE/PiliPlus') || github.event.inputs.build_win_x64 == 'true' }}
         uses: ./.github/workflows/win_x64.yml
         permissions: write-all
@@ -166,8 +190,79 @@ jobs:
             tag: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.tag || '' }}
 
     linux_x64:
+        needs: validate_release_tag
         if: ${{ github.event.inputs.build_linux_x64 == 'true' }}
         uses: ./.github/workflows/linux_x64.yml
         permissions: write-all
         with:
             tag: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.tag || '' }}
+
+    release_changelog:
+        needs: validate_release_tag
+        if: "${{ github.event_name == 'workflow_dispatch' && github.event.inputs.tag != '' }}"
+        name: Update release changelog
+        runs-on: ubuntu-latest
+        permissions:
+            contents: write
+
+        steps:
+            - name: Check out release history
+              uses: actions/checkout@v7
+              with:
+                  fetch-depth: 0
+
+            - name: Generate changelog from patch differences
+              id: changelog
+              env:
+                  GH_TOKEN: ${{ github.token }}
+                  TAG: ${{ github.event.inputs.tag }}
+              run: |
+                  set -euo pipefail
+
+                  for _ in $(seq 1 120); do
+                    if gh release view "$TAG" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+                      break
+                    fi
+                    sleep 30
+                  done
+                  gh release view "$TAG" --repo "$GITHUB_REPOSITORY" >/dev/null
+
+                  git fetch --force --tags origin
+                  current_commit=$(git rev-parse "${TAG}^{commit}")
+                  if [[ "$current_commit" != "$GITHUB_SHA" ]]; then
+                    echo "::error::Release tag $TAG targets $current_commit, but this build targets $GITHUB_SHA."
+                    exit 1
+                  fi
+                  current_tree=$(git rev-parse "${current_commit}^{tree}")
+                  previous_tag=$(gh api "repos/${GITHUB_REPOSITORY}/releases?per_page=100" | jq -r --arg tag "$TAG" \
+                    "[.[] | select(.draft == false and .tag_name != \$tag)] | sort_by(.created_at) | last | .tag_name // empty")
+
+                  notes="$RUNNER_TEMP/release-notes.md"
+                  if [[ -z "$previous_tag" ]]; then
+                    printf '%s\n' 'No previous release is available.' > "$notes"
+                  else
+                    previous_commit=$(git rev-parse "${previous_tag}^{commit}")
+                    previous_tree=$(git rev-parse "${previous_commit}^{tree}")
+                    test -n "$current_tree"
+                    test -n "$previous_tree"
+
+                    git cherry "$previous_commit" "$current_commit" | while read -r status commit; do
+                      [[ "$status" == '+' ]] || continue
+                      subject=$(git log -1 --format=%s "$commit")
+                      printf -- "- [\`%.7s\`](%s/%s/commit/%s) %s\n" \
+                        "$commit" "$GITHUB_SERVER_URL" "$GITHUB_REPOSITORY" "$commit" "$subject"
+                    done > "$notes"
+
+                    if [[ ! -s "$notes" ]]; then
+                      printf '%s\n' 'No patch differences from the previous release.' > "$notes"
+                    fi
+                  fi
+
+                  echo "notes=$notes" >> "$GITHUB_OUTPUT"
+
+            - name: Update release notes
+              env:
+                  GH_TOKEN: ${{ github.token }}
+                  TAG: ${{ github.event.inputs.tag }}
+                  NOTES: ${{ steps.changelog.outputs.notes }}
+              run: gh release edit "$TAG" --repo "$GITHUB_REPOSITORY" --notes-file "$NOTES"
