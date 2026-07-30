@@ -1,0 +1,42 @@
+name: Sync Main to Release
+
+on:
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: write
+
+concurrency:
+  group: release-promotion-${{ github.repository }}
+  cancel-in-progress: false
+
+jobs:
+  sync:
+    name: Update release
+    runs-on: ubuntu-latest
+    env:
+      FORK_PUSH_TOKEN: ${{ secrets.FORK_PUSH_TOKEN }}
+    steps:
+      - name: Update release to the pushed main commit
+        run: |
+          set -euo pipefail
+
+          if [[ -z "$FORK_PUSH_TOKEN" ]]; then
+            echo "::error::FORK_PUSH_TOKEN is not configured."
+            exit 1
+          fi
+
+          git init --quiet repository
+          cd repository
+          git remote add origin "https://x-access-token:${FORK_PUSH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git"
+          git fetch --quiet --no-tags origin "${GITHUB_SHA}"
+          git fetch --quiet --no-tags origin refs/heads/release:refs/remotes/origin/release || true
+
+          if git show-ref --verify --quiet refs/remotes/origin/release; then
+            release_before_sha="$(git rev-parse refs/remotes/origin/release)"
+            git push --force-with-lease="refs/heads/release:${release_before_sha}" origin "${GITHUB_SHA}:refs/heads/release"
+          else
+            git push origin "${GITHUB_SHA}:refs/heads/release"
+          fi
