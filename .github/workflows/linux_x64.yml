@@ -50,6 +50,7 @@ jobs:
 
       - name: Packege deb
         run: |
+          BINARY_NAME="bilibili_pro"
           printf "建立构建目录...\n"
           mkdir "PiliPlus_linux_${{ env.version }}_amd64"
           pushd "PiliPlus_linux_${{ env.version }}_amd64"
@@ -74,7 +75,7 @@ jobs:
           sed -i "9s/size_need_change/${SIZE_KB}/g" DEBIAN/control
 
           printf "生成并写入 md5sums ...\n"
-          md5sum opt/PiliPlus/piliplus >> DEBIAN/md5sums
+          md5sum "opt/PiliPlus/${BINARY_NAME}" >> DEBIAN/md5sums
           md5sum opt/PiliPlus/lib/* >> DEBIAN/md5sums
           md5sum opt/PiliPlus/data/icudtl.dat >> DEBIAN/md5sums
 
@@ -93,6 +94,7 @@ jobs:
 
       - name: Packege rpm
         run: |
+          BINARY_NAME="bilibili_pro"
           printf "建立 RPM 构建目录...\n"
           RPM_BUILD_ROOT="$PWD/rpm_build"
           mkdir -p "$RPM_BUILD_ROOT/BUILD" "$RPM_BUILD_ROOT/RPMS" "$RPM_BUILD_ROOT/SOURCES" "$RPM_BUILD_ROOT/SPECS" "$RPM_BUILD_ROOT/SRPMS"
@@ -129,9 +131,9 @@ jobs:
           cp -r bundle/* %{buildroot}/opt/PiliPlus/
 
           # 二进制权限与命令行入口
-          chmod 755 %{buildroot}/opt/PiliPlus/piliplus
+          chmod 755 %{buildroot}/opt/PiliPlus/${BINARY_NAME}
           mkdir -p %{buildroot}/usr/bin
-          ln -sf /opt/PiliPlus/piliplus %{buildroot}/usr/bin/piliplus
+          ln -sf /opt/PiliPlus/${BINARY_NAME} %{buildroot}/usr/bin/piliplus
 
           # 桌面集成
           mkdir -p %{buildroot}/usr/share/applications
@@ -172,6 +174,7 @@ jobs:
 
       - name: Package AppImage
         run: |
+          BINARY_NAME="bilibili_pro"
           printf "下载 appimagetool...\n"
           wget -q https://github.com/AppImage/appimagetool/releases/download/continuous/appimagetool-x86_64.AppImage
           chmod +x appimagetool-x86_64.AppImage
@@ -199,7 +202,7 @@ jobs:
           HERE=${SELF%/*}
           export PATH="${HERE}/usr/bin:${PATH}"
           export LD_LIBRARY_PATH="${HERE}/usr/lib:${LD_LIBRARY_PATH}"
-          exec "${HERE}/usr/bin/piliplus" "$@"
+          exec "${HERE}/usr/bin/bilibili_pro" "$@"
           APPRUN_EOF
           chmod +x "$APPDIR/AppRun"
 
