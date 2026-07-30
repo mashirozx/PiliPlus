@@ -50,6 +50,11 @@ then this fork's local commits.
 
 ## Guardrails
 
+- `upstream` is permanently read-only: use it only to fetch, inspect, diff, and
+   rebase source history. The local account has no upstream write permission.
+- Never push, create or delete tags, create releases, dispatch workflows, or
+   call write-capable GitHub APIs against `bggRGjQaUbCoE/PiliPlus`. Direct every
+   write or Actions operation to the fork `origin` (`mashirozx/PiliPlus`).
 - Do not merge `upstream/main` into `main`.
 - Do not use plain `--force` when publishing rewritten history.
 - Do not include generated build output or unrelated upstream cleanup in local
