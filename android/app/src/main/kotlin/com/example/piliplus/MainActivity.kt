@@ -1,4 +1,4 @@
-package com.example.piliplus
+package eu.mashiro.bilibili.pro
 
 import android.content.Intent
 import android.content.res.Configuration
