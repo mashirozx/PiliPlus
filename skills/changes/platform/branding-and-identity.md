@@ -95,9 +95,15 @@ requested icon and visible name.
 - Linux installs the desktop entry and hicolor icon with the new application
   ID.
 - The Android release workflow renames split APKs as
-  `BilibiliPro_android_<version>_<abi>.apk`. Release uploads and all three ABI
-  artifact globs use this exact prefix; retain the ABI suffixes because the
-  in-app update downloader selects Android assets by ABI substring.
+  `BilibiliPro_android_<semantic-version>+<timestamp>_<abi>.apk`. It removes the
+  build version's short commit hash only when renaming release attachments;
+  release uploads and all three ABI artifact globs use this exact prefix. Retain
+  the ABI suffixes because the in-app update downloader selects Android assets
+  by ABI substring.
+- The iOS, Linux, and Windows release workflows retain their existing package
+  commands, then rename the finished IPA, Linux packages, portable ZIP, and
+  Windows setup executable from `PiliPlus_` to `BilibiliPro_` before release and
+  artifact upload.
 - The Linux release workflow packages the CMake `bilibili_pro` executable in
   deb, RPM, and AppImage artifacts. Deb and RPM retain `/usr/bin/piliplus` as
   a compatibility symlink.
