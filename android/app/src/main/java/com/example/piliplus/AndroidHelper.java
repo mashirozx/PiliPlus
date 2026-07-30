@@ -1,4 +1,4 @@
-package com.example.piliplus;
+package eu.mashiro.bilibili.pro;
 
 import android.app.Activity;
 import android.app.PendingIntent;
