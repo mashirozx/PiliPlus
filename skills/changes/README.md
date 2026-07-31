@@ -15,6 +15,8 @@ or change set.
 	avoidance and safe-area regeneration rules.
 - `platform/linux-package-executable.md`: Linux executable naming and the
 	`piliplus` compatibility command used by package formats.
+- `android-debug-entrypoints.md`: Docker-first debug installation and on-demand
+  Android hot-reload entry points.
 
 ## Automation Records
 
