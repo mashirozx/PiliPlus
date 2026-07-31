@@ -303,10 +303,9 @@ class _MainAppState extends PopScopeState<MainApp>
         );
       } else if (_mainController.enableMYBar) {
         bottomNav = Obx(
-          () => NavigationBar(
-            maintainBottomViewPadding: true,
-            onDestinationSelected: _mainController.setIndex,
+          () => _AnimatedMaterialNavigationBar(
             selectedIndex: _mainController.selectedIndex.value,
+            onDestinationSelected: _mainController.setIndex,
             destinations: _mainController.navigationBars
                 .map(
                   (e) => NavigationDestination(
@@ -320,22 +319,27 @@ class _MainAppState extends PopScopeState<MainApp>
         );
       } else {
         bottomNav = Obx(
-          () => BottomNavigationBar(
-            currentIndex: _mainController.selectedIndex.value,
-            onTap: _mainController.setIndex,
-            iconSize: 16,
-            selectedFontSize: 12,
-            unselectedFontSize: 12,
-            type: .fixed,
-            items: _mainController.navigationBars
-                .map(
-                  (e) => BottomNavigationBarItem(
-                    label: e.label,
-                    icon: _buildIcon(type: e),
-                    activeIcon: _buildIcon(type: e, selected: true),
-                  ),
-                )
-                .toList(),
+          () => _BottomBarSwipeDetector(
+            selectedIndex: _mainController.selectedIndex.value,
+            destinationCount: _mainController.navigationBars.length,
+            onDestinationSelected: _mainController.setIndex,
+            child: BottomNavigationBar(
+              currentIndex: _mainController.selectedIndex.value,
+              onTap: _mainController.setIndex,
+              iconSize: 16,
+              selectedFontSize: 12,
+              unselectedFontSize: 12,
+              type: .fixed,
+              items: _mainController.navigationBars
+                  .map(
+                    (e) => BottomNavigationBarItem(
+                      label: e.label,
+                      icon: _buildIcon(type: e),
+                      activeIcon: _buildIcon(type: e, selected: true),
+                    ),
+                  )
+                  .toList(),
+            ),
           ),
         );
       }
@@ -379,29 +383,21 @@ class _MainAppState extends PopScopeState<MainApp>
             child: DrawerTheme(
               data: DrawerThemeData(width: 130 + _padding.left),
               child: Obx(
-                () => NavigationDrawer(
-                  /// apply `lib/scripts/navigation_drawer.patch`
-                  flex: 5,
-                  backgroundColor: Colors.transparent,
+                () => _AnimatedTabletNavigationDrawer(
                   onDestinationSelected: _mainController.setIndex,
                   selectedIndex: _mainController.selectedIndex.value,
+                  destinationCount: _mainController.navigationBars.length,
+                  flex: 5,
                   header: Expanded(flex: 4, child: userAndSearchVertical()),
-                  tilePadding: const .symmetric(vertical: 5, horizontal: 12),
-                  indicatorShape: const RoundedRectangleBorder(
-                    borderRadius: .all(.circular(16)),
-                  ),
-                  children: _mainController.navigationBars
-                      .map(
-                        (e) => NavigationDrawerDestination(
-                          label: Text(e.label),
-                          icon: _buildIcon(type: e),
-                          selectedIcon: _buildIcon(
-                            type: e,
-                            selected: true,
-                          ),
-                        ),
-                      )
-                      .toList(),
+                  destinationBuilder: (index, key) {
+                    final destination = _mainController.navigationBars[index];
+                    return NavigationDrawerDestination(
+                      key: key,
+                      label: Text(destination.label),
+                      icon: _buildIcon(type: destination),
+                      selectedIcon: _buildIcon(type: destination, selected: true),
+                    );
+                  },
                 ),
               ),
             ),
@@ -543,6 +539,380 @@ class _MainAppState extends PopScopeState<MainApp>
           onPressed: () => Get.toNamed('/search'),
         ),
       ],
+    );
+  }
+}
+
+class _BottomBarSwipeDetector extends StatefulWidget {
+  const _BottomBarSwipeDetector({
+    required this.selectedIndex,
+    required this.destinationCount,
+    required this.onDestinationSelected,
+    required this.child,
+  });
+
+  final int selectedIndex;
+  final int destinationCount;
+  final ValueChanged<int> onDestinationSelected;
+  final Widget child;
+
+  @override
+  State<_BottomBarSwipeDetector> createState() =>
+      _BottomBarSwipeDetectorState();
+}
+
+class _AnimatedMaterialNavigationBar extends StatefulWidget {
+  const _AnimatedMaterialNavigationBar({
+    required this.selectedIndex,
+    required this.onDestinationSelected,
+    required this.destinations,
+  });
+
+  final int selectedIndex;
+  final ValueChanged<int> onDestinationSelected;
+  final List<NavigationDestination> destinations;
+
+  @override
+  State<_AnimatedMaterialNavigationBar> createState() =>
+      _AnimatedMaterialNavigationBarState();
+}
+
+class _AnimatedMaterialNavigationBarState
+    extends State<_AnimatedMaterialNavigationBar>
+    with SingleTickerProviderStateMixin {
+  static const _indicatorWidth = 64.0;
+  static const _indicatorHeight = 32.0;
+  // Matches NavigationBar's selected icon position when its label is shown.
+  static const _indicatorTop = 15.0;
+
+  late final AnimationController _indicatorController;
+  late int _previousIndex;
+
+  @override
+  void initState() {
+    super.initState();
+    _previousIndex = widget.selectedIndex;
+    _indicatorController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 360),
+      value: 1,
+    );
+  }
+
+  @override
+  void didUpdateWidget(_AnimatedMaterialNavigationBar oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.selectedIndex != oldWidget.selectedIndex) {
+      _previousIndex = oldWidget.selectedIndex;
+      _indicatorController.forward(from: 0);
+    }
+  }
+
+  @override
+  void dispose() {
+    _indicatorController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final navigationBarTheme = NavigationBarTheme.of(context);
+    final theme = Theme.of(context);
+    final indicatorColor =
+        navigationBarTheme.indicatorColor ??
+        theme.colorScheme.secondaryContainer;
+
+    return _BottomBarSwipeDetector(
+      selectedIndex: widget.selectedIndex,
+      destinationCount: widget.destinations.length,
+      onDestinationSelected: widget.onDestinationSelected,
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          final itemWidth = constraints.maxWidth / widget.destinations.length;
+          return Stack(
+            children: [
+              Positioned.fill(
+                child: ColoredBox(
+                  color:
+                      navigationBarTheme.backgroundColor ??
+                      theme.colorScheme.surfaceContainer,
+                ),
+              ),
+              AnimatedBuilder(
+                animation: _indicatorController,
+                builder: (context, child) {
+                  final progress = Curves.easeInOutCubicEmphasized.transform(
+                    _indicatorController.value,
+                  );
+                  final distance =
+                      (widget.selectedIndex - _previousIndex).abs() * itemWidth;
+                  final expansion = (progress * 2).clamp(0.0, 1.0);
+                  final contraction = ((progress - .5) * 2).clamp(0.0, 1.0);
+                  final movingRight = widget.selectedIndex >= _previousIndex;
+                  final startLeft =
+                      _previousIndex * itemWidth +
+                      (itemWidth - _indicatorWidth) / 2;
+                  final left = movingRight
+                      ? startLeft + distance * contraction
+                      : startLeft - distance * expansion;
+                  final width =
+                      _indicatorWidth + distance * (expansion - contraction);
+                  return Positioned(
+                    left: left,
+                    top: _indicatorTop,
+                    width: width,
+                    height: _indicatorHeight,
+                    child: DecoratedBox(
+                      decoration: ShapeDecoration(
+                        color: indicatorColor,
+                        shape: const StadiumBorder(),
+                      ),
+                    ),
+                  );
+                },
+              ),
+              NavigationBarTheme(
+                data: navigationBarTheme.copyWith(
+                  backgroundColor: Colors.transparent,
+                  indicatorColor: Colors.transparent,
+                  surfaceTintColor: Colors.transparent,
+                ),
+                child: NavigationBar(
+                  maintainBottomViewPadding: true,
+                  onDestinationSelected: widget.onDestinationSelected,
+                  selectedIndex: widget.selectedIndex,
+                  destinations: widget.destinations,
+                ),
+              ),
+            ],
+          );
+        },
+      ),
+    );
+  }
+}
+
+class _AnimatedTabletNavigationDrawer extends StatefulWidget {
+  const _AnimatedTabletNavigationDrawer({
+    required this.selectedIndex,
+    required this.onDestinationSelected,
+    required this.destinationCount,
+    required this.destinationBuilder,
+    required this.header,
+    required this.flex,
+  });
+
+  final int selectedIndex;
+  final ValueChanged<int> onDestinationSelected;
+  final int destinationCount;
+  final NavigationDrawerDestination Function(int index, Key key)
+  destinationBuilder;
+  final Widget header;
+  final int flex;
+
+  @override
+  State<_AnimatedTabletNavigationDrawer> createState() =>
+      _AnimatedTabletNavigationDrawerState();
+}
+
+class _AnimatedTabletNavigationDrawerState
+    extends State<_AnimatedTabletNavigationDrawer>
+    with SingleTickerProviderStateMixin {
+  static const _indicatorHeight = 56.0;
+  final _drawerKey = GlobalKey();
+  late final AnimationController _indicatorController;
+  late List<GlobalKey> _destinationKeys;
+  List<Rect>? _destinationRects;
+  late int _previousIndex;
+  double? _dragStartY;
+
+  @override
+  void initState() {
+    super.initState();
+    _destinationKeys = List.generate(
+      widget.destinationCount,
+      (_) => GlobalKey(),
+    );
+    _previousIndex = widget.selectedIndex;
+    _indicatorController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 360),
+      value: 1,
+    );
+    WidgetsBinding.instance.addPostFrameCallback(
+      (_) => _measureDestinations(),
+    );
+  }
+
+  @override
+  void didUpdateWidget(_AnimatedTabletNavigationDrawer oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.destinationCount != oldWidget.destinationCount) {
+      _destinationKeys = List.generate(
+        widget.destinationCount,
+        (_) => GlobalKey(),
+      );
+      WidgetsBinding.instance.addPostFrameCallback(
+        (_) => _measureDestinations(),
+      );
+    }
+    if (widget.selectedIndex != oldWidget.selectedIndex) {
+      _previousIndex = oldWidget.selectedIndex;
+      _indicatorController.forward(from: 0);
+    }
+  }
+
+  @override
+  void dispose() {
+    _indicatorController.dispose();
+    super.dispose();
+  }
+
+  void _measureDestinations() {
+    final drawerBox =
+        _drawerKey.currentContext?.findRenderObject() as RenderBox?;
+    if (!mounted || drawerBox == null) {
+      return;
+    }
+    final destinationRects = <Rect>[];
+    for (final key in _destinationKeys) {
+      final destinationBox =
+          key.currentContext?.findRenderObject() as RenderBox?;
+      if (destinationBox == null) {
+        return;
+      }
+      final offset = destinationBox.localToGlobal(
+        Offset.zero,
+        ancestor: drawerBox,
+      );
+      destinationRects.add(
+        Rect.fromLTWH(
+          12,
+          offset.dy + (destinationBox.size.height - _indicatorHeight) / 2,
+          drawerBox.size.width - 24,
+          _indicatorHeight,
+        ),
+      );
+    }
+    setState(() => _destinationRects = destinationRects);
+  }
+
+  void _handlePointerUp(PointerUpEvent event) {
+    final dragStartY = _dragStartY;
+    _dragStartY = null;
+    if (dragStartY == null) {
+      return;
+    }
+    final dragDistance = event.position.dy - dragStartY;
+    if (dragDistance.abs() < 48) {
+      return;
+    }
+    final nextIndex = widget.selectedIndex + (dragDistance < 0 ? 1 : -1);
+    if (nextIndex >= 0 && nextIndex < widget.destinationCount) {
+      widget.onDestinationSelected(nextIndex);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final drawerTheme = NavigationDrawerTheme.of(context);
+    final theme = Theme.of(context);
+    final indicatorColor =
+        drawerTheme.indicatorColor ?? theme.colorScheme.secondaryContainer;
+
+    return Listener(
+      behavior: HitTestBehavior.translucent,
+      onPointerDown: (event) => _dragStartY = event.position.dy,
+      onPointerUp: _handlePointerUp,
+      onPointerCancel: (_) => _dragStartY = null,
+      child: Stack(
+        key: _drawerKey,
+        children: [
+          if (_destinationRects case final destinationRects?)
+            AnimatedBuilder(
+              animation: _indicatorController,
+              builder: (context, child) {
+                final from = destinationRects[_previousIndex];
+                final to = destinationRects[widget.selectedIndex];
+                final progress = Curves.easeInOutCubicEmphasized.transform(
+                  _indicatorController.value,
+                );
+                final distance = (to.top - from.top).abs();
+                final expansion = (progress * 2).clamp(0.0, 1.0);
+                final contraction = ((progress - .5) * 2).clamp(0.0, 1.0);
+                final movingDown = to.top >= from.top;
+                final top = movingDown
+                    ? from.top + distance * contraction
+                    : from.top - distance * expansion;
+                final height =
+                    from.height + distance * (expansion - contraction);
+                return Positioned(
+                  left: from.left,
+                  top: top,
+                  width: from.width,
+                  height: height,
+                  child: DecoratedBox(
+                    decoration: ShapeDecoration(
+                      color: indicatorColor,
+                      shape: const RoundedRectangleBorder(
+                        borderRadius: BorderRadius.all(Radius.circular(16)),
+                      ),
+                    ),
+                  ),
+                );
+              },
+            ),
+          NavigationDrawerTheme(
+            data: drawerTheme.copyWith(indicatorColor: Colors.transparent),
+            child: NavigationDrawer(
+              backgroundColor: Colors.transparent,
+              flex: widget.flex,
+              header: widget.header,
+              tilePadding: const .symmetric(vertical: 5, horizontal: 12),
+              onDestinationSelected: widget.onDestinationSelected,
+              selectedIndex: widget.selectedIndex,
+              children: List.generate(
+                widget.destinationCount,
+                (index) => widget.destinationBuilder(
+                  index,
+                  _destinationKeys[index],
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _BottomBarSwipeDetectorState extends State<_BottomBarSwipeDetector> {
+  double? _dragStartX;
+
+  void _handlePointerUp(PointerUpEvent event) {
+    final dragStartX = _dragStartX;
+    _dragStartX = null;
+    if (dragStartX == null) {
+      return;
+    }
+    final dragDistance = event.position.dx - dragStartX;
+    if (dragDistance.abs() < 48) {
+      return;
+    }
+    final nextIndex = widget.selectedIndex + (dragDistance < 0 ? 1 : -1);
+    if (nextIndex >= 0 && nextIndex < widget.destinationCount) {
+      widget.onDestinationSelected(nextIndex);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Listener(
+      behavior: HitTestBehavior.translucent,
+      onPointerDown: (event) => _dragStartX = event.position.dx,
+      onPointerUp: _handlePointerUp,
+      onPointerCancel: (_) => _dragStartX = null,
+      child: widget.child,
     );
   }
 }
