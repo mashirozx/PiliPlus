@@ -32,18 +32,52 @@ Docker-first requirement for builds, dependency management, and automated tests.
    The Gradle configuration applies this signing config to all build types,
    including debug. This keeps local Docker-built APKs consistently signed and
    installable as updates on the emulator.
-3. Build the Android artifact through the cached repository Docker workflow:
+3. Use the Android debug entry points from the repository root:
 
    ```sh
-   tool/docker_flutter.sh flutter pub get
-   tool/generate_android_launcher_icons.sh
-   tool/docker_flutter.sh flutter build apk --debug --pub
+   # Build a debug APK and install it to Genymotion.
+   tool/android_debug_install.sh
+
+   # Start a background debug session that builds, installs, and enables Dart hot reload.
+   tool/android_hot_reload_start.sh
+
+   # After saving Dart changes, request one hot reload from the running session.
+   tool/android_hot_reload_trigger.sh
+
+   # After development is complete, end its hot-reload session and pause the container.
+   tool/android_dev_container_pause.sh
+
+   # Before development resumes, unpause, restart, or recreate the container.
+   tool/android_dev_container_resume.sh
    ```
 
-   The wrapper persists the Flutter 3.44.8 SDK, Pub packages, Gradle cache, and
-   Android SDK under `build/docker-cache/`. The first invocation populates the
-   cache; later builds reuse it. Set `PILIPLUS_DOCKER_CACHE` to use a different
-   cache location.
+   The Android entry points reuse the `piliplus-android-dev` Docker container,
+   preserving its Gradle daemon across invocations. Set
+   `PILIPLUS_ANDROID_DEV_CONTAINER` to use a different container name. The
+   hot-reload start script returns after creating its background session.
+   Follow `build/android-hot-reload/flutter-run.log` until it contains `Flutter
+   run key commands`, then invoke the trigger script after each saved Dart
+   change. The trigger sends Flutter's `r` command through a container-local
+   FIFO. The session runs both ADB and `flutter run` inside Docker, keeping VM
+   Service port forwarding and the control channel in the same network namespace. Set
+   `PILIPLUS_ANDROID_DEVICE` to select a different ADB endpoint. Native Android,
+   Gradle, manifest, dependency, and icon changes require a new session or a
+   normal debug build.
+
+   The Docker wrapper persists the Flutter 3.44.8 SDK, Pub packages, Gradle
+   cache, and Android SDK under `build/docker-cache/`. The first invocation
+   populates the cache; later builds reuse it. Set `PILIPLUS_DOCKER_CACHE` to use
+   a different cache location. Remove the reusable development container with
+   `docker rm -f piliplus-android-dev` when its caches or Flutter version need a
+   fresh process.
+
+   The pause entry point terminates the active `flutter run` session before
+   freezing the development container. After resuming, start a fresh session
+   with `tool/android_hot_reload_start.sh` before triggering reloads. On this
+   OrbStack workstation, pausing the container can reclaim its inactive memory.
+   The resume entry point starts a stopped container and recreates a removed
+   container; the normal debug and hot-reload entry points also recreate it
+   automatically.
 4. Confirm the device is visible to ADB, then install the artifact and perform
    the requested interactive debugging or smoke test.
 5. When debugging supports a code change, record only the relevant command and
@@ -68,3 +102,10 @@ Docker-first requirement for builds, dependency management, and automated tests.
    so the generator's `16%` inset does not double-apply the foreground safe area.
 - Treat the emulator as disposable test state; do not rely on persistent data
   without documenting it.
+- Flutter, Gradle, dependency resolution, compilation, and installation remain
+   inside Docker.
+- Keep `piliplus-android-dev` running during an active development conversation
+   so its Gradle daemon remains warm. Do not pause it automatically after a
+   build, install, or hot reload. Pause it only when the user explicitly asks or
+   confirms that Android development is complete; resume it before the next
+   Android debug action.
