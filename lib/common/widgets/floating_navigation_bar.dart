@@ -18,7 +18,7 @@ const _kNavigationShape = RoundedSuperellipseBorder(
 );
 
 /// ref [NavigationBar]
-class FloatingNavigationBar extends StatelessWidget {
+class FloatingNavigationBar extends StatefulWidget {
   // ignore: prefer_const_constructors_in_immutables
   FloatingNavigationBar({
     super.key,
@@ -37,6 +37,7 @@ class FloatingNavigationBar extends StatelessWidget {
     this.labelTextStyle,
     this.labelPadding,
     this.bottomPadding = 8.0,
+    this.floating = true,
   }) : assert(destinations.length >= 2),
        assert(0 <= selectedIndex && selectedIndex < destinations.length);
 
@@ -56,10 +57,67 @@ class FloatingNavigationBar extends StatelessWidget {
   final EdgeInsetsGeometry? labelPadding;
   final double bottomPadding;
 
+  final bool floating;
+
+  @override
+  State<FloatingNavigationBar> createState() => _FloatingNavigationBarState();
+}
+
+class _FloatingNavigationBarState extends State<FloatingNavigationBar>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _indicatorController;
+  late int _previousIndex;
+  double? _dragStartX;
+
+  @override
+  void initState() {
+    super.initState();
+    _previousIndex = widget.selectedIndex;
+    _indicatorController = AnimationController(
+      vsync: this,
+      duration: widget.animationDuration,
+      value: 1,
+    );
+  }
+
+  @override
+  void didUpdateWidget(FloatingNavigationBar oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.animationDuration != oldWidget.animationDuration) {
+      _indicatorController.duration = widget.animationDuration;
+    }
+    if (widget.selectedIndex != oldWidget.selectedIndex) {
+      _previousIndex = oldWidget.selectedIndex;
+      _indicatorController.forward(from: 0);
+    }
+  }
+
+  @override
+  void dispose() {
+    _indicatorController.dispose();
+    super.dispose();
+  }
+
   VoidCallback _handleTap(int index) {
-    return onDestinationSelected != null
-        ? () => onDestinationSelected!(index)
+    return widget.onDestinationSelected != null
+        ? () => widget.onDestinationSelected!(index)
         : () {};
+  }
+
+  void _handlePointerUp(PointerUpEvent event) {
+    final dragStartX = _dragStartX;
+    _dragStartX = null;
+    if (dragStartX == null) {
+      return;
+    }
+    final dragDistance = event.position.dx - dragStartX;
+    if (dragDistance.abs() < 48) {
+      return;
+    }
+    final nextIndex = widget.selectedIndex + (dragDistance < 0 ? 1 : -1);
+    if (nextIndex >= 0 && nextIndex < widget.destinations.length) {
+      widget.onDestinationSelected?.call(nextIndex);
+    }
   }
 
   @override
@@ -68,71 +126,157 @@ class FloatingNavigationBar extends StatelessWidget {
 
     final navigationBarTheme = NavigationBarTheme.of(context);
     final effectiveLabelBehavior =
-        labelBehavior ??
+        widget.labelBehavior ??
         navigationBarTheme.labelBehavior ??
         defaults.labelBehavior!;
 
     final padding = MediaQuery.viewPaddingOf(context);
 
-    return Padding(
-      padding: .fromLTRB(
-        padding.left,
-        0,
-        padding.right,
-        bottomPadding + padding.bottom,
-      ),
-      child: SizedBox(
-        height: _kNavigationHeight,
-        width: destinations.length * _kIndicatorWidth,
-        child: DecoratedBox(
-          decoration: ShapeDecoration(
-            color: ElevationOverlay.applySurfaceTint(
-              backgroundColor ??
-                  navigationBarTheme.backgroundColor ??
-                  defaults.backgroundColor!,
-              surfaceTintColor ??
-                  navigationBarTheme.surfaceTintColor ??
-                  defaults.surfaceTintColor,
-              elevation ?? navigationBarTheme.elevation ?? defaults.elevation!,
+    return UnconstrainedBox(
+      child: Padding(
+        padding: .fromLTRB(
+          widget.floating ? padding.left : 0,
+          0,
+          widget.floating ? padding.right : 0,
+          (widget.floating ? widget.bottomPadding : 0) + padding.bottom,
+        ),
+        child: SizedBox(
+          height: widget.floating ? _kNavigationHeight : 80,
+          width: widget.floating
+              ? widget.destinations.length * _kIndicatorWidth
+              : MediaQuery.sizeOf(context).width,
+          child: DecoratedBox(
+            decoration: ShapeDecoration(
+              color: ElevationOverlay.applySurfaceTint(
+                widget.backgroundColor ??
+                    navigationBarTheme.backgroundColor ??
+                    defaults.backgroundColor!,
+                widget.surfaceTintColor ??
+                    navigationBarTheme.surfaceTintColor ??
+                    defaults.surfaceTintColor,
+                widget.elevation ??
+                    navigationBarTheme.elevation ??
+                    defaults.elevation!,
+              ),
+              shape: widget.floating
+                  ? RoundedSuperellipseBorder(
+                      side: defaults.borderSide,
+                      borderRadius: _kBorderRadius,
+                    )
+                  : const RoundedRectangleBorder(),
             ),
-            shape: RoundedSuperellipseBorder(
-              side: defaults.borderSide,
-              borderRadius: _kBorderRadius,
-            ),
-          ),
-          child: Padding(
-            padding: _kIndicatorPadding,
-            child: Row(
-              crossAxisAlignment: .stretch,
-              children: <Widget>[
-                for (int i = 0; i < destinations.length; i++)
-                  Expanded(
-                    child: _SelectableAnimatedBuilder(
-                      duration: animationDuration,
-                      isSelected: i == selectedIndex,
-                      builder: (context, animation) {
-                        return _NavigationDestinationInfo(
-                          index: i,
-                          selectedIndex: selectedIndex,
-                          totalNumberOfDestinations: destinations.length,
-                          selectedAnimation: animation,
-                          labelBehavior: effectiveLabelBehavior,
-                          indicatorColor: indicatorColor,
-                          indicatorShape: indicatorShape,
-                          overlayColor: overlayColor,
-                          onTap: _handleTap(i),
-                          labelTextStyle: labelTextStyle,
-                          labelPadding: labelPadding,
-                          child: destinations[i],
-                        );
-                      },
-                    ),
+            child: Listener(
+              behavior: HitTestBehavior.opaque,
+              onPointerDown: (event) => _dragStartX = event.position.dx,
+              onPointerUp: _handlePointerUp,
+              onPointerCancel: (_) => _dragStartX = null,
+              child: Padding(
+                padding: widget.floating ? _kIndicatorPadding : EdgeInsets.zero,
+                child: LayoutBuilder(
+                  builder: (context, constraints) => Stack(
+                    fit: StackFit.expand,
+                    children: [
+                      _SharedNavigationIndicator(
+                        animation: _indicatorController,
+                        fromIndex: _previousIndex,
+                        toIndex: widget.selectedIndex,
+                        destinationCount: widget.destinations.length,
+                        size: constraints.biggest,
+                        color:
+                            widget.indicatorColor ??
+                            navigationBarTheme.indicatorColor ??
+                            defaults.indicatorColor!,
+                        shape: widget.indicatorShape ?? _kNavigationShape,
+                      ),
+                      Row(
+                        crossAxisAlignment: .stretch,
+                        children: <Widget>[
+                          for (int i = 0; i < widget.destinations.length; i++)
+                            Expanded(
+                              child: _SelectableAnimatedBuilder(
+                                duration: widget.animationDuration,
+                                isSelected: i == widget.selectedIndex,
+                                builder: (context, animation) {
+                                  return _NavigationDestinationInfo(
+                                    index: i,
+                                    selectedIndex: widget.selectedIndex,
+                                    totalNumberOfDestinations:
+                                        widget.destinations.length,
+                                    selectedAnimation: animation,
+                                    labelBehavior: effectiveLabelBehavior,
+                                    indicatorColor: null,
+                                    indicatorShape: null,
+                                    showIndicator: false,
+                                    overlayColor: widget.overlayColor,
+                                    onTap: _handleTap(i),
+                                    labelTextStyle: widget.labelTextStyle,
+                                    labelPadding: widget.labelPadding,
+                                    child: widget.destinations[i],
+                                  );
+                                },
+                              ),
+                            ),
+                        ],
+                      ),
+                    ],
                   ),
-              ],
+                ),
+              ),
             ),
           ),
         ),
       ),
+    );
+  }
+}
+
+class _SharedNavigationIndicator extends StatelessWidget {
+  const _SharedNavigationIndicator({
+    required this.animation,
+    required this.fromIndex,
+    required this.toIndex,
+    required this.destinationCount,
+    required this.size,
+    required this.color,
+    required this.shape,
+  });
+
+  final Animation<double> animation;
+  final int fromIndex;
+  final int toIndex;
+  final int destinationCount;
+  final Size size;
+  final Color color;
+  final ShapeBorder shape;
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedBuilder(
+      animation: animation,
+      builder: (context, child) {
+        final itemWidth = size.width / destinationCount;
+        final distance = (toIndex - fromIndex).abs() * itemWidth;
+        final progress = Curves.easeInOutCubicEmphasized.transform(
+          animation.value,
+        );
+        final expansion = (progress * 2).clamp(0.0, 1.0);
+        final contraction = ((progress - .5) * 2).clamp(0.0, 1.0);
+        final isMovingRight = toIndex >= fromIndex;
+        final left = isMovingRight
+            ? fromIndex * itemWidth + distance * contraction
+            : fromIndex * itemWidth - distance * expansion;
+        final width = itemWidth + distance * (expansion - contraction);
+        final top = (size.height - _kIndicatorHeight) / 2;
+        return Positioned(
+          left: left,
+          top: top,
+          width: width,
+          height: _kIndicatorHeight,
+          child: DecoratedBox(
+            decoration: ShapeDecoration(color: color, shape: shape),
+          ),
+        );
+      },
     );
   }
 }
@@ -172,13 +316,14 @@ class FloatingNavigationDestination extends StatelessWidget {
       alignment: .center,
       clipBehavior: .none,
       children: [
-        NavigationIndicator(
-          animation: animation,
-          color:
-              info.indicatorColor ??
-              navigationBarTheme.indicatorColor ??
-              defaults.indicatorColor!,
-        ),
+        if (info.showIndicator)
+          NavigationIndicator(
+            animation: animation,
+            color:
+                info.indicatorColor ??
+                navigationBarTheme.indicatorColor ??
+                defaults.indicatorColor!,
+          ),
         _NavigationDestinationBuilder(
           label: label,
           tooltip: tooltip,
@@ -309,6 +454,7 @@ class _NavigationDestinationInfo extends InheritedWidget {
     required this.labelBehavior,
     required this.indicatorColor,
     required this.indicatorShape,
+    required this.showIndicator,
     required this.overlayColor,
     required this.onTap,
     this.labelTextStyle,
@@ -329,6 +475,8 @@ class _NavigationDestinationInfo extends InheritedWidget {
   final Color? indicatorColor;
 
   final ShapeBorder? indicatorShape;
+
+  final bool showIndicator;
 
   final WidgetStateProperty<Color?>? overlayColor;
 
