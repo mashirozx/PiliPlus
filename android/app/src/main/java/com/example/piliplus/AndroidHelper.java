@@ -289,7 +289,9 @@ public final class AndroidHelper {
 
     public static void updateDocProvider(boolean enabled) {
         Context context = getContext();
-        final ComponentName componentName = new ComponentName(context, BiliDocumentsProvider.class);
+        final ComponentName componentName = new ComponentName(
+            context, "com.example.piliplus.BiliDocumentsProvider"
+        );
         final int state = enabled ? PackageManager.COMPONENT_ENABLED_STATE_ENABLED
                 : PackageManager.COMPONENT_ENABLED_STATE_DISABLED;
         context.getPackageManager().setComponentEnabledSetting(componentName, state, PackageManager.DONT_KILL_APP);
